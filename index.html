@@ -1,268 +1,29 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🐍 Snake Game</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: radial-gradient(circle at center, #101010, #000);
-      font-family: 'Poppins', sans-serif;
-      color: green;
-      text-align: center;
-    }
-
-    canvas {
-      display: none;
-      margin: auto;
-      background: #111;
-      border: 3px solid #00ff99;
-      border-radius: 10px;
-      box-shadow: 0 0 15px #00ff99;
-    }
-
-    #overlay, #winScreen, #gameOverScreen {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    button {
-      background: #00ff99;
-      border: none;
-      color: #000;
-      font-weight: bold;
-      padding: 10px 20px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      background: #00ffaa;
-    }
-  </style>
+  <title>Snake Game</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <canvas id="gameCanvas"></canvas>
-
-  <div id="overlay">
-    <h1 id="title">🐍 Snake Game</h1>
-    <button id="startBtn">Start Game</button>
+  <div id="ui">
+    <div id="topbar">
+      <div id="score">Score: 0</div>
+      <button id="startBtn">Mulai</button>
+      <button id="restartBtn" class="hidden">Mulai Ulang</button>
+    </div>
+    <div id="canvasWrap">
+      <canvas id="gameCanvas"></canvas>
+      <div id="overlay" class="visible">
+        <h1>🐍 Snake Game</h1>
+        <p>Bantu ular, makan buah dan daging bonus!</p>
+        <button id="playBtn">Main</button>
+      </div>
+    </div>
+    <div id="hint">Bantuan: +5 didapat dari daging</div>
   </div>
-
-  <div id="winScreen" style="display: none;">
-    <h1>🏆 You Win!</h1>
-    <button id="restartWinBtn">Play Again</button>
-  </div>
-
-  <div id="gameOverScreen" style="display: none;">
-    <h1>💀 Game Over!</h1>
-    <p>You Died!</p>
-    <button id="restartBtn">Play Again</button>
-  </div>
-
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const startBtn = document.getElementById("startBtn");
-    const overlay = document.getElementById("overlay");
-    const winScreen = document.getElementById("winScreen");
-    const gameOverScreen = document.getElementById("gameOverScreen");
-    const restartBtn = document.getElementById("restartBtn");
-    const restartWinBtn = document.getElementById("restartWinBtn");
-
-    let box = 20;
-    let snake;
-    let direction;
-    let food = [];
-    let score;
-    let lives;
-    let game;
-    let width, height;
-
-    function resizeCanvas() {
-      width = Math.floor(window.innerWidth / box) * box;
-      height = Math.floor(window.innerHeight / box) * box;
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-
-    function startGame() {
-      overlay.style.display = "none";
-      winScreen.style.display = "none";
-      gameOverScreen.style.display = "none";
-      canvas.style.display = "block";
-
-      snake = [{ x: 10 * box, y: 10 * box }];
-      direction = "RIGHT";
-      score = 0;
-      lives = 3;
-      food = [spawnFood()];
-
-      clearInterval(game);
-      game = setInterval(draw, 150);
-    }
-
-    function spawnFood() {
-      const colors = ["#ff0000", "#ff9900", "#ffff00"];
-      return {
-        x: Math.floor(Math.random() * (width / box)) * box,
-        y: Math.floor(Math.random() * (height / box)) * box,
-        color: colors[Math.floor(Math.random() * colors.length)]
-      };
-    }
-
-    document.addEventListener("keydown", e => {
-      if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
-      if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
-      if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
-      if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
-    });
-
-    // --- kontrol swipe (HP)
-    let startX, startY;
-    canvas.addEventListener("touchstart", e => {
-      const touch = e.touches[0];
-      startX = touch.clientX;
-      startY = touch.clientY;
-    });
-
-    canvas.addEventListener("touchmove", e => {
-      if (!startX || !startY) return;
-      const touch = e.touches[0];
-      const dx = touch.clientX - startX;
-      const dy = touch.clientY - startY;
-
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0 && direction !== "LEFT") direction = "RIGHT";
-        else if (dx < 0 && direction !== "RIGHT") direction = "LEFT";
-      } else {
-        if (dy > 0 && direction !== "UP") direction = "DOWN";
-        else if (dy < 0 && direction !== "DOWN") direction = "UP";
-      }
-      startX = null;
-      startY = null;
-    });
-
-    function draw() {
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, width, height);
-
-      // gambar makanan
-      for (let f of food) {
-        ctx.fillStyle = f.color;
-        ctx.beginPath();
-        ctx.arc(f.x + box / 2, f.y + box / 2, box / 2.5, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-
-      // gambar ular
-      for (let i = 0; i < snake.length; i++) {
-        ctx.fillStyle = i === 0 ? "#00ff33" : "#009900";
-        ctx.fillRect(snake[i].x, snake[i].y, box, box);
-        if (i === 0) {
-          ctx.fillStyle = "#000";
-          ctx.beginPath();
-          ctx.arc(snake[i].x + box * 0.25, snake[i].y + box * 0.25, 2, 0, 2 * Math.PI);
-          ctx.arc(snake[i].x + box * 0.75, snake[i].y + box * 0.25, 2, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-      }
-
-      // posisi kepala baru
-      let headX = snake[0].x;
-      let headY = snake[0].y;
-
-      if (direction === "LEFT") headX -= box;
-      if (direction === "RIGHT") headX += box;
-      if (direction === "UP") headY -= box;
-      if (direction === "DOWN") headY += box;
-
-      // tembus dinding
-      if (headX >= width) headX = 0;
-      if (headX < 0) headX = width - box;
-      if (headY >= height) headY = 0;
-      if (headY < 0) headY = height - box;
-
-      // makan buah
-      let ate = false;
-      for (let i = 0; i < food.length; i++) {
-        if (headX === food[i].x && headY === food[i].y) {
-          score++;
-          ate = true;
-          food.splice(i, 1);
-          break;
-        }
-      }
-
-      // setiap 7 buah → tambah 3 bonus buah
-      if (score > 0 && score % 7 === 0 && food.length < 3) {
-        for (let i = 0; i < 3; i++) food.push(spawnFood());
-      }
-
-      // jika tidak makan → potong ekor
-      if (!ate) snake.pop();
-      else food.push(spawnFood());
-
-      const newHead = { x: headX, y: headY };
-
-      // cek tabrak diri
-      if (checkCollision(newHead, snake)) {
-        lives--;
-        if (lives <= 0) {
-          gameOver();
-          return;
-        } else {
-          snake = [{ x: 10 * box, y: 10 * box }];
-          direction = "RIGHT";
-          return;
-        }
-      }
-
-      snake.unshift(newHead);
-
-      // tampilkan skor & nyawa
-      ctx.fillStyle = "#fff";
-      ctx.font = "18px Poppins";
-      ctx.fillText("Score: " + score, 10, 25);
-      ctx.fillText("❤️: " + lives, 10, 45);
-
-      // menang
-      if (score >= 100) {
-        win();
-      }
-    }
-
-    function checkCollision(head, arr) {
-      for (let i = 0; i < arr.length; i++) {
-        if (head.x === arr[i].x && head.y === arr[i].y) return true;
-      }
-      return false;
-    }
-
-    function win() {
-      clearInterval(game);
-      canvas.style.display = "none";
-      winScreen.style.display = "block";
-    }
-
-    function gameOver() {
-      clearInterval(game);
-      canvas.style.display = "none";
-      gameOverScreen.style.display = "block";
-    }
-
-    startBtn.addEventListener("click", startGame);
-    restartBtn.addEventListener("click", startGame);
-    restartWinBtn.addEventListener("click", startGame);
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
+
